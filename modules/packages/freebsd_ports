@@ -1,0 +1,64 @@
+#!/bin/sh -e
+
+command=$1
+
+while read -r line; do
+  export INPUT_$line
+done
+
+list_updates() {
+  pkg version -v -l "<" | sed -Ee $'s/([^ ]+)-[^-]+ .* (.*)\\)/Name=\\1\\\nVersion=\\2\\\nArchitecture=freebsd:10:x86:64/'
+}
+
+case $command in
+  supports-api-version)
+    echo 1
+  ;;
+  get-package-data)
+    name="${INPUT_File?File must be given to get-package-data}"
+    echo PackageType=repo
+    echo Name=$name
+  ;;
+  list-installed)
+    pkg info -f -a | grep -E '^(Name|Version|Architecture)' | sed -Ee 's/[ ]+:[ ]+/=/'
+  ;;
+  repo-install)
+    name="${INPUT_Name?Name must be given to repo-install}"
+    version="${INPUT_Version}"
+
+    export BATCH=1
+    cd `whereis -sq "$name"`
+
+    if [ "$version" ]
+    then
+      available=`make -V PORTVERSION`
+      if [ "$available" != "$version" ]
+      then
+        echo "ErrorMessage=Could not install $name $version, available version was $available"
+        exit 0
+      fi
+    fi
+
+    if `pkg info -e "$name"`
+    then
+      make deinstall reinstall >&2
+    else
+      make install >&2
+    fi
+  ;;
+  list-updates)
+    portsnap --interactive fetch update >&2
+    list_updates
+  ;;
+  list-updates-local)
+    list_updates
+  ;;
+  remove)
+    name="${INPUT_Name?Name must be given to remove}"
+    BATCH=1
+    cd `whereis -sq "$name"`
+    make deinstall >&2
+  ;;
+  *)
+  echo "ErrorMessage=Invalid operation"
+esac
