@@ -2,6 +2,8 @@
 
 Unit testing Bash (or any Bourne-compatible) shell scripts using shunit2, complete with stubbing and mocking (kinda)!
 
+The script under test is `modules/packages/freebsd_ports` and the test suite is in `tests/package_module.sh`.
+
 ## Setup
 
 #### Quickstart with OS X and Homebrew
